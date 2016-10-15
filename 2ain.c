@@ -22,10 +22,9 @@ struct perf
 	int number;
 }typedef Perfect;
 
-/* In this structure we are writing the words from OUTPUT.TXT */
 struct Words
 {
-	char *word;				/* The word */
+	char *word;
 	int length;
 	char key;
 	struct Words *next, *past;
@@ -108,78 +107,73 @@ int Entr(char **str)
 	return i;
 }
 
-/* Initialize WORDS for reading word*/
-Words *CreateWords(Words *Head, int *count)
+Words *CreateWords(Words *Top, int *count)
 {
-	Head->next=(Words*)calloc(1,sizeof(Words));
-	if(Head->next==NULL){		printf("[Crossword] Error memory in CreateWords");	exit(EXIT_SUCCESS);};
-	
+	Words *Head=Top;
+	Head->next=(Words*)malloc(sizeof(Words));
+	if(Head->next==NULL){	printf("Error");	getchar();	};
 	Head->next->past=Head;
-	
+	Head->next->word=NULL;
+	Head->next->next=NULL;
+	Head->next->flag=0;
+	Head->next->key=NULL;
 	Head->next->count=*count;
 	Head->next->word=(char*)malloc(sizeof(char));
-
-	if(Head->next->word==NULL){	printf("[Crossword] Error memory in CreateWords");	exit(EXIT_SUCCESS);}
-
+	if(Head->next->word==NULL){	printf("Error");	getchar();	};
 	*count+=1;
 	return Head->next;
 }
 
 void GetWords(Words **data, int *Line, int *Col)
 {
-	int c;
+	char c;
 	int i=0, max=0,n=0;
 	int count=1;
-
-	Words *Head=(Words*)calloc(1,sizeof(Words));
+	Words *Head=(Words*)malloc(sizeof(Words));
+ 
 	Words *Dump=Head;
 
 	FILE *Output=fopen("Output.txt", "rb+");
-	if( !Output ){	printf("[Crossword] File didn't found. Error in GetWords");		exit(EXIT_SUCCESS);}
+	if( !Output ){	printf("File didn't found"); getchar(); exit(EXIT_SUCCESS);}
 
+	Head->flag=NULL;
+	Head->past=NULL;
+	Head->next=NULL;
+	Head->word=NULL;
+	Head->key=NULL;
 	Head->next=Dump=CreateWords(Dump, &count);
 
-/* Reading words from Output*/
-	c=fgetc(Output);
-	while(c!= EOF)
+	while(fscanf(Output, "%c",&c)!= EOF)
 	{
-/* if we are find end of string */		
+		i++;
+		Dump->word=(char*)realloc(Dump->word, sizeof(char)*i);
+		if(c==13)	fscanf(Output, "%c",&c);
 		if(c=='\n')
 		{
-			Dump->length=i;
-			i++;
-			fseek(Output, -i, SEEK_CUR);
-			Dump->word=(char*)realloc(Dump->word, sizeof(char)*i);
-			i--;
-			if(fread(Dump->word, sizeof(char), i, Output) != i){ printf("[Crossword] Error in GetWords");}
-			c=fgetc(Output);
-
-			/*Calculate maximum length*/
-			if((Dump->length)>max)	max=Dump->length;				
-			
+			Dump->word[i-1]=0;
+			Dump->length=i-1;
+			if((Dump->length)>max)	max=Dump->length;
+			//Add(Head, Dump);
 			Dump=CreateWords(Dump, &count);
-			i=-1;
+			i=0;
 			n++;
-		}
-
-		i++;	
-		c=fgetc(Output);
+		}else	Dump->word[i-1]=c;	
 	}
 	if(i!=0)
 	{
-		fseek(Output, -i, SEEK_CUR);
-		i++;
-		Dump->word=(char*)realloc(Dump->word, sizeof(char)*i);
-		i--;
-		if(fread(Dump->word, sizeof(char), i, Output) != i){ printf("[Crossword] Error in GetWords");}
-
+		Dump->word=(char*)realloc(Dump->word, sizeof(char)*(i+1));
+		Dump->word[i-1]=c;
+		Dump->word[i]=0;	
 		Dump->length=i;
+		//if((Dump->length)>max)	max=Dump->length;
+		//Add(Head, Dump);
+		i=0;
 		n++;
 	}else{
 		free(Dump->word);
 		free(Dump);
 	}
-	
+	printf("%d\t%d\n",max,n);
 	*Col=max;
 	*Line=n;
 	*data=Head;
@@ -581,7 +575,7 @@ int main(int argcp, char **argv)
 				free(Pole[i]);
 			}
 			free(Pole);
-			printf("[Crossword] Error in main");
+			printf("Error");
 			getchar();
 		}
 	}
