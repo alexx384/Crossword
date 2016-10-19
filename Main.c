@@ -1,4 +1,4 @@
-﻿#include <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
 #include "GraphicalPart.h"
@@ -36,6 +36,7 @@ struct Words
 Perfect *Origin;
 int Rat=0;
 
+/* free PERFECT structure */
 void DelPerfect(Perfect *Noname)
 {
 	Perfect *Dump;
@@ -51,10 +52,9 @@ void DelPerfect(Perfect *Noname)
 
 void Ravno(Perfect *Maybe, int Max)
 {
-	int i;
 	Perfect *Dump;
 	Dump=Origin;
-	//Max--;
+	
 	while(Maybe->past)
 		Maybe=Maybe->past;
 
@@ -71,18 +71,23 @@ void Ravno(Perfect *Maybe, int Max)
 	Origin=Dump;
 }
 
+/* Create MAX count of elements */
 void CreatePerfect(Perfect **Top, int max)
 {
 	Perfect *Dump;
 	Dump=Top[0]=(Perfect*)calloc(1,sizeof(Perfect));
-	Top[0]->past=NULL;
+	
 	for(;max>0; max--)
 	{
+ /* Create and configure next element */		
 		Top[0]->next=(Perfect*)calloc(1,sizeof(Perfect));
 		Top[0]->next->past=Top[0];
-		Top[0]->next->next=NULL;
+
+ /* Switch to the next element */		
 		Top[0]=Top[0]->next;
 	}
+
+ /* Switch to start element */	
 	Top[0]=Dump;
 }
 
@@ -125,6 +130,8 @@ Words *CreateWords(Words *Head, int *count)
 	return Head->next;
 }
 
+/* In this function we are reading all word from file OUTPUT.TXT
+	and writing result in struct WORDS*/
 void GetWords(Words **data, int *Line, int *Col)
 {
 	int c;
@@ -139,11 +146,11 @@ void GetWords(Words **data, int *Line, int *Col)
 
 	Head->next=Dump=CreateWords(Dump, &count);
 
-/* Reading words from Output*/
+ /* Reading words from Output*/
 	c=fgetc(Output);
 	while(c!= EOF)
 	{
-/* if we are find end of string */		
+ /* if we are find end of string */		
 		if(c=='\n')
 		{
 			Dump->length=i;
@@ -153,6 +160,7 @@ void GetWords(Words **data, int *Line, int *Col)
 			i--;
 			if(fread(Dump->word, sizeof(char), i, Output) != i){ printf("[Crossword] Error in GetWords");}
 			c=fgetc(Output);
+			Dump->word[i]=0;
 
 			/*Calculate maximum length*/
 			if((Dump->length)>max)	max=Dump->length;				
@@ -174,89 +182,79 @@ void GetWords(Words **data, int *Line, int *Col)
 		if(fread(Dump->word, sizeof(char), i, Output) != i){ printf("[Crossword] Error in GetWords");}
 
 		Dump->length=i;
+		Dump->word[i]=0;
+		if((Dump->length)>max)	max=Dump->length;
 		n++;
 	}else{
 		free(Dump->word);
 		free(Dump);
 	}
-	
 	*Col=max;
 	*Line=n;
 	*data=Head;
+	fclose(Output);
 }
 //-----------------
 
-int PasteX(Protoblast **Pole, Words *Head, int i, int j, int count)
-{
-	if(Pole[i][j+count].word==Head->word[count])							
-	{														
-		if(Pole[i][j+count].logic!=1)	return 1;
-	}
-	return 0;
-}
-
-int PasteY(Protoblast **Pole, Words *Head, int i, int j, int count)
-{
-	if(Pole[i+count][j].word==Head->word[count])							
-	{														
-		if(Pole[i+count][j].logic!=2)	return 1;
-	}
-	return 0;
-}
-
-int ZeroPasteX(Protoblast **Pole, Words *Head, int i, int j, int count)
-{
-	if(Pole[i][j+count].word==0)
-	{
-		if(Pole[i][j+count].logic!=1) return 1;
-	}
-	return 0;
-}
-
-int ZeroPasteY(Protoblast **Pole, Words *Head, int i, int j, int count)
-{
-	if(Pole[i+count][j].word==0)
-	{
-		if(Pole[i+count][j].logic!=2)	return 1;	
-	}
-	return 0;
-}
-
+/* Check for horizontal position for all field */
 void ToX(Words *Head,Protoblast **Pole, struct Resault *Stat, int Line, int Col, int MainKey)
 {
-	int i,j,count,key=0;
+	int i,j,count,key=0, jcount, length=Head->length;
+	Protoblast *field;
+	char *word=Head->word;
 
 	for(i=0; i<Line; i++)
 	{
-		count=0;
-		for(j=0; j<Col; j++)
+		field=Pole[i];
+		for(j=0, jcount=0; j<Col; j++)
 		{
-			if((Head->length+j) <= Col)
+ /* if the word is fit to column from( W O R D ..| ) to ( W O R D| )  */
+			if(jcount < Col)
 			{
-				for(count=0; count < (Head->length); count++)
+ /* Need: j, Head, Pole[i], key */				
+				jcount=j;
+
+				for(count=0; count < length; count++, jcount++)
 				{
-					if(ZeroPasteX(Pole, Head, i, j, count))	;
-					else{
-						if(PasteX(Pole, Head, i, j, count))
-							key++;
-						else	break;
+ /* if cell is not empty by x */
+		
+					if(field[jcount].word!=0)	
+					{
+						if(field[jcount].logic == 1)		
+							break;
+					 	/* if other crossing */
+						if(field[jcount].word != word[count])
+							break;
+
+						key++;
 					}
 				}
-				if(count==Head->length)
+
+				if(Stat->Rate<key)
 				{
-					if(Stat->Rate<key)
+					if(count==Head->length)
 					{
 						Stat->Col=j;
 						Stat->Line=i;
-	//					if(key>1)	
-//							i++;
+
 						Stat->Posit=1;
 						if(key==1 && MainKey==2){	Stat->Rate=key;	return;}
 						if(MainKey==1)	Stat->Rate=key;
-						//Stat->Rate=key;
 					}
 				}
+
+				if(key==0 && count==Head->length && field[jcount].word==0)
+				{
+					for(jcount++; jcount<Col; jcount++)
+					{
+						if(field[jcount].word != 0)
+							break;
+					}
+					j=jcount-count-1;
+				}else jcount=j+length+1;
 				key=0;
+			}else{
+				j=Col;
 			}
 		}
 	}
@@ -264,36 +262,53 @@ void ToX(Words *Head,Protoblast **Pole, struct Resault *Stat, int Line, int Col,
 
 void ToY(Words *Head,Protoblast **Pole, struct Resault *Stat, int Line, int Col, int MainKey)
 {
-	int i,j,count,key=0;
+	int i,j,count,key=0, icount, length=Head->length;
+	char *word=Head->word;
+	//Line-=Head->length-3;
 
 	for(j=0; j<Col; j++)
 	{
-		count=0;
-		for(i=0; i<Line; i++)
+		for(i=0, icount=0; i<Line; i++)
 		{
-			if((Head->length+i) <= Line)
+			if(icount < Line)
 			{
-				for(count=0; count<Head->length; count++)
+				icount=i;
+				
+				for(count=0; count < length; count++, icount++)
 				{
-					if(ZeroPasteY(Pole, Head, i, j, count))	;
-					else{
-						if(PasteY(Pole, Head, i, j, count))
-							key++;
-						else	break;
+					
+					if(Pole[icount][j].word!=0)	
+					{
+						if(Pole[icount][j].logic == 2)		
+							break;
+	
+						if(Pole[icount][j].word != word[count])
+							break;
+
+						key++;
 					}
 				}
-				if(count==Head->length)
+				
+				if(Stat->Rate<key)
 				{
-					if(Stat->Rate<key)
+					if(count==Head->length)
 					{
 						Stat->Col=j;
 						Stat->Line=i;
 						Stat->Posit=2;
 						if(key==1 && MainKey==2){	Stat->Rate=key;	return;}
 						if(MainKey==1)	Stat->Rate=key;
-						//Stat->Rate=key;
 					}
 				}
+				if(key==0 && count==Head->length && Pole[icount][j].word==0)
+				{
+					for(icount++; icount<Line; icount++)
+					{
+						if(Pole[icount][j].word != 0)
+							break;
+					}
+					i=icount-count-1;
+				}else icount=i+length+1;
 				key=0;
 			}
 		}
@@ -303,46 +318,63 @@ void ToY(Words *Head,Protoblast **Pole, struct Resault *Stat, int Line, int Col,
 
 int Optimiation(Words *Head, Protoblast **Pole, int *sta, int Line, int Col, int key, Resault *Stat)
 {
-	int i;
-	int Second=0;
+	int i, StatCol, length=Head->length;
+	int iStatCol, iStatLine, iCol;
+	char *word=Head->word;
+	Protoblast *field;
+
 	
 	Stat->Rate=0;
 	if(*sta>-1)
-	{
-		
+	{		
 		ToX(Head, Pole, Stat, Line, Col, key);
 		ToY(Head, Pole, Stat, Line, Col, key);
 		
-//		if(Stat->Rate>1)	
-//			key++;
 
 		if(Stat->Rate)
 		{
+			StatCol=Stat->Col;
 			if(Stat->Posit==1)
 			{
-				for(i=0; i<Head->length; i++)
+				i=0;
+				iStatCol=StatCol;
+				field=Pole[Stat->Line];
+
+				field[iStatCol].word = word[i];
+				if(field[iStatCol].logic==0)
+						field[iStatCol].logic=Stat->Posit;
+
+				for(i++, iStatCol++; i<length; i++, iStatCol++)
 				{
-					Pole[Stat->Line][Stat->Col+i].word=Head->word[i];
-					if(i==0 || Pole[Stat->Line][Stat->Col+i].color==-1)	
-								Pole[Stat->Line][Stat->Col+i].color=-1;
-					else{ 
-						if(Pole[Stat->Line][Stat->Col+i].color!=-3)
-							Pole[Stat->Line][Stat->Col+i].color=Head->count;}
-					if(Pole[Stat->Line][Stat->Col+i].logic==0)
-						Pole[Stat->Line][Stat->Col+i].logic=Stat->Posit;
+					field[iStatCol].word = word[i];
+					if(field[iStatCol].color!=-1)	
+					{ 
+						if(field[iStatCol].color!=-3)
+							field[iStatCol].color=Head->count;
+					}
+					if(field[iStatCol].logic==0)
+						field[iStatCol].logic=Stat->Posit;
 				}
+
 				return Stat->Rate;
 			}else{
-				for(i=0; i<Head->length; i++)
+				i=0;
+				iStatLine=Stat->Line;
+				Pole[iStatLine][StatCol].word = word[i];
+
+				if(Pole[iStatLine][StatCol].logic==0)
+						Pole[iStatLine][StatCol].logic=Stat->Posit;
+
+				for(i++, iStatLine++; i<length; i++, iStatLine++)
 				{
-					Pole[Stat->Line+i][Stat->Col].word=Head->word[i];
-					if(i==0 || Pole[Stat->Line+i][Stat->Col].color==-1)
-								Pole[Stat->Line+i][Stat->Col].color=-1;
-					else{ 
-						if(Pole[Stat->Line+i][Stat->Col].color!=-3)
-							Pole[Stat->Line+i][Stat->Col].color=Head->count;}
-					if(Pole[Stat->Line+i][Stat->Col].logic==0)
-						Pole[Stat->Line+i][Stat->Col].logic=Stat->Posit;
+					Pole[iStatLine][StatCol].word = word[i];
+					if(Pole[iStatLine][StatCol].color!=-1)
+					{ 
+						if(Pole[iStatLine][StatCol].color!=-3)
+							Pole[iStatLine][StatCol].color=Head->count;
+					}
+					if(Pole[iStatLine][StatCol].logic==0)
+						Pole[iStatLine][StatCol].logic=Stat->Posit;
 				}
 			}
 			Head->key=1;
@@ -355,13 +387,18 @@ int Optimiation(Words *Head, Protoblast **Pole, int *sta, int Line, int Col, int
 		Stat->Rate=1;
 		Stat->Posit=1;
 		Stat->Line=Line/=2;
-		Stat->Col=Col=Col/2-Head->length/2;
-		for(i=0; i<(Head->length); i++)
+		Stat->Col=Col=Col/2-length/2;
+ /* Optimal variant */		
+	//	Col-=length;
+	//	Stat->Col=Col=Col >> 1;
+
+		field=Pole[Line];
+		field[Col].color=-1;
+		for(i=1, iCol=Col+1; i<length; i++, iCol++)
 		{
-			Pole[Line][Col+i].word=Head->word[i];
-			if(i==0)		Pole[Line][Col+i].color=-1;
-			else			Pole[Line][Col+i].color=-3;
-			Pole[Line][Col+i].logic=1;
+			field[iCol].word = word[i];
+			field[iCol].color=-3;
+			field[iCol].logic=1;
 		}
 		Head->key=1;
 		return 1;
@@ -369,6 +406,7 @@ int Optimiation(Words *Head, Protoblast **Pole, int *sta, int Line, int Col, int
 	return 0;
 }
 
+/* Get the next element of Head. If next element if null return 1 */
 int GetNext(Words **Head)
 {
 	if(Head[0]->next != NULL)
@@ -379,44 +417,31 @@ int GetNext(Words **Head)
 	return 0;
 }
 
-int IfNotOtherWord(Resault Stat, Words *Head, Protoblast **Pole, int Line, int Col, int count)
-{
-	if(Stat.Posit==1)
-	{
-		if(((Stat.Line+1)<Line) && (Pole[Stat.Line+1][Stat.Col+count].logic==2))	return 0;
-		if(((Stat.Line-1)>-1)	&& (Pole[Stat.Line-1][Stat.Col+count].logic==2))	return 0;
-		
-	}else{
-		if(((Stat.Col+1)<Col) && (Pole[Stat.Line+count][Stat.Col+1].logic==1))	return 0;
-		if(((Stat.Col-1)>-1)	&& (Pole[Stat.Line+count][Stat.Col-1].logic==1))	return 0;
-	}
-	return 1;
-}
-
 void DelWord(Resault Stat, Words *Head, Protoblast **Pole, int Line, int Col)
 {
-	int count;
+	int count, StatCol=Stat.Col, StatLine=Stat.Line, length=Head->length, StatPosit=Stat.Posit;
+	Protoblast *field;
+
 	if(Stat.Posit==1)
 	{
-		for(count=0; count<(Head->length); count++)
+		field=Pole[StatLine];
+		for(count=0; count < length; count++, StatCol++)
 		{
-			if(Pole[Stat.Line][Stat.Col+count].logic==Stat.Posit)/* && 
-				IfNotOtherWord(Stat, Head, Pole, Line, Col, count))*/
+			if(Pole[StatLine][StatCol].logic == StatPosit)
 			{
-				Pole[Stat.Line][Stat.Col+count].color=0;
-				Pole[Stat.Line][Stat.Col+count].word=0;
-				Pole[Stat.Line][Stat.Col+count].logic=0;
+				field[StatCol].color=0;
+				field[StatCol].word=0;
+				field[StatCol].logic=0;
 			}
 		}
 	}else{
-		for(count=0; count<(Head->length); count++)
+		for(count=0; count< length; count++, StatLine++)
 		{
-			if(Pole[Stat.Line+count][Stat.Col].logic==Stat.Posit)/* &&
-				IfNotOtherWord(Stat, Head, Pole, Line, Col, count))*/
+			if(Pole[StatLine][StatCol].logic == StatPosit)
 			{
-				Pole[Stat.Line+count][Stat.Col].color=0;
-				Pole[Stat.Line+count][Stat.Col].word=0;
-				Pole[Stat.Line+count][Stat.Col].logic=0;
+				Pole[StatLine][StatCol].color=0;
+				Pole[StatLine][StatCol].word=0;
+				Pole[StatLine][StatCol].logic=0;
 			}
 		}
 	}
@@ -439,7 +464,6 @@ void WriteToMem(Words *Nachalo, Words *Head, Protoblast **Pole, int sta, int Lin
 			Head->flag=1;
 			if((i=Optimiation(Head, Pole, &sta, Line, Col, key, &Stat)) == 0)
 			{	
-				//DelWord(Stat, Head, Pole);
 				cic=0;
 				Head->flag=0;
 				continue;
@@ -459,7 +483,7 @@ void WriteToMem(Words *Nachalo, Words *Head, Protoblast **Pole, int sta, int Lin
 	}
 	if(cic==0)	return;
 	
-//	MainInitGraphics(Pole, Line, Col);
+
 	if(Pos==Max)
 	{
 		if(Rat<(Result+i))
@@ -468,9 +492,7 @@ void WriteToMem(Words *Nachalo, Words *Head, Protoblast **Pole, int sta, int Lin
 			Ravno(Maybe, Max);
 		}
 	}
-	//MainInitGraphics(Pole, Line, Col);
-		
-		//printf("\n");
+
 	Pos--;
 
 	return;
@@ -513,75 +535,89 @@ void WriteToPole(Protoblast **Pole, int max, Words *Head)
 	}
 }
 
+/* free WORDS structure */
 char destr(Words *Head)
 {
-	char c=1;
-	if(Head==NULL)	return c;
+	char c;
+	if(Head==NULL)	return 1;
 	c=Head->key;
-	c*=destr(Head->next);
-	//c*=destr(Head->right);
+	c=destr(Head->next);
+	
 	
 	if(Head->word!=NULL)	free(Head->word);
 
 	free(Head);
-	return c;
+	return 1;
 }
 
 int main(int argcp, char **argv)
 {
 	Protoblast **Pole;
-	int Col, Line,x,y,i=0, length=0;
-	Words *Head, *Nachalo;
-	Perfect *Maybe;
-	int sta=0,dump=0;
-	int Max;
-	int answ;
-	char *str;
-	char prov;
 
+	Words *Head, *Nachalo;
+
+	Perfect *Maybe;
+
+	int Col, Line,i=0, length=0;
+	int sta=-1;
+	int Max;
+	int answ=0;
+	char *str;
+
+/* In this function we are reading all word from file OUTPUT.TXT
+	and writing result in struct WORDS*/
 	GetWords(&Head, &Line, &Col);
 	Nachalo=Head;
 	Max=Line;
-	while(length!=1 && (i!=1 || i!=2))
+	
+	while(length!=1 && (answ!=1 || answ!=2))
 	{
 		printf("Choose: 1-Smin, 2-Smax\n");
 		length=Entr(&str);
 		printf("\n");
-		i=atoi(str);
+		answ=atoi(str);
 		free(str);
 	}
-	answ=i;
+
+/* Create MAX count of elements */ 
 	CreatePerfect(&Origin, Max);
 	CreatePerfect(&Maybe, Max);
 
-		Line*=2;
-		Col*=2;
+/* Calculate size for crosswords field */
+	Line*=2;
+	Col*=2;
 
-		Pole=(Protoblast**)malloc(sizeof(Protoblast*)*Line);
-		for(i=0; i!=Line; i++)
-		{
-			Pole[i]=(Protoblast*)calloc(1,sizeof(Protoblast)*Col);
-		}
+/* Create field and initialize with NULL */
+	Pole=(Protoblast**)malloc(sizeof(Protoblast*)*Line);
 
-		sta=-1;
-		if(answ==1)	WriteToMem(Nachalo, Head, Pole, sta, Line, Col, 1, 0, Max, 0, Maybe);
-		if(answ==2)	WriteToMem(Nachalo, Head, Pole, sta, Line, Col, 2, 0, Max, 0, Maybe);
-
-		WriteToPole(Pole, Max, Head);
-
-		DelPerfect(Origin);
-		DelPerfect(Maybe);
-
-		if(destr(Head))
-		{
-			MainInitGraphics(Pole, Line, Col, argcp, argv);
-		}else{
-			for(i=0; i!=Line; i++)
-			{
-				free(Pole[i]);
-			}
-			free(Pole);
-			printf("[Crossword] Error in main");
-			getchar();
-		}
+	for(i=0; i!=Line; i++)
+	{
+		Pole[i]=(Protoblast*)calloc(Col ,sizeof(Protoblast));
 	}
+
+/* Version of crossword with Minimum engaged field */
+	if(answ==1)	WriteToMem(Nachalo, Head, Pole, sta, Line, Col, 1, 0, Max, 0, Maybe);
+/* Version of crossword with Maximum engaged field */	
+	if(answ==2)	WriteToMem(Nachalo, Head, Pole, sta, Line, Col, 2, 0, Max, 0, Maybe);
+
+	WriteToPole(Pole, Max, Head);
+
+/* free PERFECT structure */
+	DelPerfect(Origin);
+	DelPerfect(Maybe);
+
+/* free WORDS structure */
+
+	destr(Head);
+
+/* Drowing field */	
+	MainInitGraphics(Pole, Line, Col, argcp, argv);
+
+/* free field (struct PROTOBLAST) */	
+	for(i=0; i!=Line; i++)
+	{
+		free(Pole[i]);
+	}
+	free(Pole);
+}
+	

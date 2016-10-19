@@ -1,6 +1,6 @@
 #include "GL/glut.h"
 
-
+/* Part of field */
 struct Kletka
 {
 	char word;
