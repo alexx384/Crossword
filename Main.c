@@ -31,6 +31,7 @@ struct Words
 	struct Words *next, *past;
 	int count;
 	char flag;
+	int divisibility;
 } typedef Words;
 
 Perfect *Origin;
@@ -154,6 +155,10 @@ void GetWords(Words **data, int *Line, int *Col)
 		if(c=='\n')
 		{
 			Dump->length=i;
+			Dump->divisibility=1;
+			if((i % 2) == 0)	Dump->divisibility=2;
+			if((i % 3) == 0)	Dump->divisibility=3;
+			if((i % 4) == 0)	Dump->divisibility=4;
 			i++;
 			fseek(Output, -i, SEEK_CUR);
 			Dump->word=(char*)realloc(Dump->word, sizeof(char)*i);
@@ -182,6 +187,10 @@ void GetWords(Words **data, int *Line, int *Col)
 		if(fread(Dump->word, sizeof(char), i, Output) != i){ printf("[Crossword] Error in GetWords");}
 
 		Dump->length=i;
+		Dump->divisibility=1;
+		if((i % 2) == 0)	Dump->divisibility=2;
+		if((i % 3) == 0)	Dump->divisibility=3;
+		if((i % 4) == 0)	Dump->divisibility=4;
 		Dump->word[i]=0;
 		if((Dump->length)>max)	max=Dump->length;
 		n++;
@@ -264,6 +273,8 @@ void ToY(Words *Head,Protoblast **Pole, struct Resault *Stat, int Line, int Col,
 {
 	int i,j,count,key=0, icount, length=Head->length;
 	char *word=Head->word;
+	//Protoblast field;
+	Protoblast m1, m2;
 	//Line-=Head->length-3;
 
 	for(j=0; j<Col; j++)
@@ -274,19 +285,42 @@ void ToY(Words *Head,Protoblast **Pole, struct Resault *Stat, int Line, int Col,
 			{
 				icount=i;
 				
-				for(count=0; count < length; count++, icount++)
+				for(count=0; count < length; )
 				{
-					
-					if(Pole[icount][j].word!=0)	
-					{
-						if(Pole[icount][j].logic == 2)		
-							break;
-	
-						if(Pole[icount][j].word != word[count])
-							break;
 
-						key++;
-					}
+					//field=Pole[icount][j];
+					if((length-count) ==1)
+					{
+						m1=Pole[icount][j];
+
+						if(m1.word!=0)	
+						{
+							if(m1.logic == 2)			break;
+							if(m1.word != word[count])	break;
+							key++;
+						}
+						count++;
+						icount++;
+					}else{
+						m1=Pole[icount][j];
+						m2=Pole[icount+1][j];
+
+						if(m1.word!=0 || m2.word!=0)	
+						{
+							if(m1.logic == 2 || m2.logic == 2)						break;
+							if(m1.word != word[count] && m1.word!=0)	break;
+							if(m1.word!=0) key++;
+							if(m2.word != word[count+1] && m2.word!=0)	break;
+							if(m2.word!=0) key++;
+						}	
+							count+=2;
+							icount+=2;
+					}					
+					//mm1=Pole[icount][j];
+					//mm2=Pole[icount+1][j];
+					//mm3=Pole[icount+2][j];
+					//mm4=Pole[icount+3][j];
+					
 				}
 				
 				if(Stat->Rate<key)
@@ -304,8 +338,7 @@ void ToY(Words *Head,Protoblast **Pole, struct Resault *Stat, int Line, int Col,
 				{
 					for(icount++; icount<Line; icount++)
 					{
-						if(Pole[icount][j].word != 0)
-							break;
+						if(Pole[icount][j].word != 0)				break;
 					}
 					i=icount-count-1;
 				}else icount=i+length+1;
@@ -328,6 +361,21 @@ int Optimiation(Words *Head, Protoblast **Pole, int *sta, int Line, int Col, int
 	if(*sta>-1)
 	{		
 		ToX(Head, Pole, Stat, Line, Col, key);
+		/*switch(Head->divisibility)
+		{
+			case 1:
+				ToY1(Head, Pole, Stat, Line, Col, key);						
+				break;
+			case 2:
+				ToY2(Head, Pole, Stat, Line, Col, key);						
+				break;
+			case 3:
+				ToY3(Head, Pole, Stat, Line, Col, key);						
+				break;
+			case 4:
+				ToY4(Head, Pole, Stat, Line, Col, key);						
+				break;		
+		}*/
 		ToY(Head, Pole, Stat, Line, Col, key);
 		
 

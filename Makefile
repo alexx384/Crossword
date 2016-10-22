@@ -1,6 +1,6 @@
 CC=gcc
-CFLAGS=-c -Wall -g -pg
-LDFLAGS=-lGL -lGLU -lglut -g -pg
+CFLAGS=-c -m32 -mfpmath=sse -Ofast -Wall -g -pg
+LDFLAGS=-lGL -lGLU -lglut -m32 -mfpmath=sse -Ofast -Wall -g -pg
 LINKEDLIBRARY=-LGraphicalPart.h
 SOURCES=Main.c GraphicalPart.c
 OBJECTS=$(SOURCES:.c=.o)
@@ -15,3 +15,6 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(CFLAGS) $< -o $@
 
 #-m32 -mfpmath=sse -Ofast -flto -march=native -funroll-loops
+
+#-Wall -g -pg
+#-g -pg
